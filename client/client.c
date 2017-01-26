@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 struct sockaddr_in d;
 int sock;
 char buffer[256];
-int port = 9115;
+int port = 9114;
 char *serv_addr = "127.0.0.1";
 int n;
 
