@@ -53,7 +53,7 @@ int main() {
 	} room;
    room room_db[MAX_ROOM];
 
-  char * service = "9114"; /* service name or port number */
+  char * service = "9116"; /* service name or port number */
   int    m_sock, s_sock;   /* master and slave socket     */
   char buffer[256];
   int n;
@@ -91,9 +91,11 @@ int main() {
 		//bool false
 		int name_exists = 0;
 		for (i = 0; i < 256; ++i)
+			//check if room name exists
 			if(strcmp(room_db[i].room_name, (&buffer[7]))== 0){
 				printf("Name already exists\n");
 				fflush(stdout);
+				//set true
 				name_exists= 1;
 			}
 			else if(name_exists == 0 && strlen(room_db[i].room_name) == 0){
@@ -101,6 +103,20 @@ int main() {
 				printf("room created ");
 				printf(room_db[i].room_name);
 				fflush(stdout);
+				char temp_port[4];
+				room_db[i].port_num = atoi(service) +i + 1;
+				sprintf(temp_port, "%d" , room_db[i].port_num);
+				printf(temp_port);
+				fflush(stdout);
+				n = write(s_sock, temp_port, 5);
+				room_db[i].process_id = fork();
+				if(room_db[i].process_id == 0){
+					close(m_sock);
+					m_sock = passiveTCPsock(temp_port, 32);
+					for (;;) {
+						s_sock = accept(m_sock,(struct sockaddr*)&fsin, &fsin_len);
+						if (s_sock < 0) printf("accept failed");
+				}
 				i=256;
 			}
 	}
@@ -111,11 +127,21 @@ int main() {
 	}
 	else if(buffer[0] == 'D' && buffer[1] == 'E' && buffer[2] == 'L' && 
 	buffer[3] == 'E' && buffer[4] == 'T' && buffer[5] == 'E'){
-		printf("delete\n");
+		/*printf("delete\n");
 		fflush(stdout);
+		for (i = 0; i < 256; ++i)
+			//check if room name exists
+			if(strcmp(room_db[i].room_name, (&buffer[7]))== 0){
+				printf("Deleting %s\n", room_db[i].room_name);
+				fflush(stdout);
+			}
+			else if(name_exists == 0 && strlen(room_db[i].room_name) == 0){
+				
+				printf("room created ");*/
 	}
 	
 	memset(buffer, '\0', 256);
     close(s_sock);
   }
+}
 }
