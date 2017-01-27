@@ -67,7 +67,7 @@ int main() {
   sem = mmap(0, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   sem_init(sem,1,1);
   
-  char * service = "9115"; /* service name or port number */
+  char * service = "9145"; /* service name or port number */
   int    m_sock, s_sock;   /* master and slave socket     */
   char buffer[256];
   int n;
@@ -104,25 +104,31 @@ int main() {
 		int i;
 		//bool false
 		int name_exists = 0;
-		for (i = 0; i < 256; ++i)
+		for (i = 0; i < 256; ++i){
+			//check if room name exists
 			if(strcmp(room_db[i].room_name, (&buffer[7]))== 0){
 				printf("Name already exists\n");
 				fflush(stdout);
+				//set true
 				name_exists= 1;
 			}
 			else if(name_exists == 0 && strlen(room_db[i].room_name) == 0){
 				strncpy(room_db[i].room_name, &buffer[7], sizeof (room_db[i].room_name -1));
-				printf("room created: ");
+				printf("room created ");
 				printf(room_db[i].room_name);
 				fflush(stdout);
-				i=256;
+				
 				//itoa(atoi(service)+i+1,room_db[i].port_num,10);
 				sprintf(room_db[i].port_num, "%d", atoi(service)+i+1);
-				printf("port num itoa: %sEND",room_db[i].port_num);
+			printf("port num itoa: [%s] in i [%d]\n",room_db[i].port_num, i);
 				fflush(stdout);
 				room_db[i].master_socket = passiveTCPsock(room_db[i].port_num, 32);
 				room_db[i].num_members = 0;
+				i=256;
+				char* reply = "K";
+				write(s_sock, reply, strlen(reply));
 			}
+	}
 	}
 	else if(buffer[0] == 'J' && buffer[1] == 'O' && buffer[2] == 'I' && 
 	buffer[3] == 'N'){
@@ -134,9 +140,9 @@ int main() {
 		
 		for (i = 0; i < 2; ++i)
 		{
-			printf("comparing [%s] andd [%s]\n",room_db[i].room_name,&buffer[5]);
-			//if(strcmp(room_db[i].room_name, (&buffer[5]))== 0){
-			if(strstr(buffer, room_db[i].room_name) != NULL){
+			printf("comparing [%s] and [%s]\n",room_db[i].room_name,&buffer[5]);
+			if(strcmp(room_db[i].room_name, (&buffer[5]))== 0){
+			//if(strstr(buffer, room_db[i].room_name) != NULL && strcmp(room_db[i].room_name,"") != 0){
 				printf("join Name exists\n");
 				fflush(stdout);
 				sem_wait(sem);
@@ -144,6 +150,9 @@ int main() {
 				fflush(stdout);
 				name_exists= 1;
 				room_db[i].slave_socket[room_db[i].num_members] = accept(room_db[i].master_socket,(struct sockaddr*)&fsin, &fsin_len);
+				char* portber = room_db[i].port_num;
+				printf("sending [%s] I IS %d\n",portber, i);
+				write(s_sock, portber, strlen(portber));
 				room_db[i].num_members = room_db[i].num_members + 1;
 				room_db[i].process_id = fork();
 				if (room_db[i].process_id == 0) //child
@@ -160,6 +169,8 @@ int main() {
 					sem_post(sem);
 					n = read(room_db[i].slave_socket[room_db[i].num_members], buffer,255);
 					printf("message chat: %s\n",buffer);
+					
+					
 					_exit(0);
 				}
 			}
@@ -167,6 +178,8 @@ int main() {
 				//room not exists
 				printf("join not exist\n");
 			}
+			else
+				printf("join not exist in i: [%d]\n", i);
 		}
 	}
 	else if(buffer[0] == 'D' && buffer[1] == 'E' && buffer[2] == 'L' && 
