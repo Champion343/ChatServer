@@ -92,6 +92,7 @@ int passiveTCPsock(const char * service, int backlog) {
 			   fflush(stdout);
 			   localR->slave_socket[members] = accept(localR->master_socket,(struct sockaddr*)&fsin, &fsin_len);
 			   if (localR->slave_socket[members] < 0) printf("accept to chat fail\n");
+			   else printf("join accept success\n");
 			   //save to local select
 			   members++;
 			   
@@ -112,7 +113,8 @@ int passiveTCPsock(const char * service, int backlog) {
 					if (FD_ISSET(localR->slave_socket[k], &readfds))
 					{
 						r = read(localR->slave_socket[k], msg, 255);
-						if (r > 0)							
+						if (r > 0)
+						{printf("client sent msg: [%s] in room [%s]\n", msg,localR->room_name);							
 						for (m=0;m<members;m++)
 						{
 							if (m!=k)
@@ -121,6 +123,7 @@ int passiveTCPsock(const char * service, int backlog) {
 								write(localR->slave_socket[m], msg, 256);
 							}
 								
+						}
 						}
 						else if ( r == 0)
 							printf("disconnected client\n");
@@ -169,7 +172,7 @@ int main() {
     write(s_sock, pts, strlen(pts));*/
     n = read(s_sock, buffer,255);
 	if (n > 0)
-	printf("message: [%s]\n",buffer);
+	printf("master message: [%s]\n",buffer);
 	
 	/*buffer[strlen(buffer) - 2] = '\0';
 	int cmp = strcmp(buffer, "CREATE\n");
