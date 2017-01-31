@@ -15,8 +15,9 @@ int main(int argc, char *argv[]) {
 
 struct sockaddr_in d;
 int sock, room_sock;
+int join_port = 0;
 char buffer[256],  buf[256];
-int port = 9551;
+int port = 9650;
 char *serv_addr = "127.0.0.1";
 int m, n, sel, max_fd;
 fd_set read_fds;
@@ -25,35 +26,39 @@ struct timeval time, time1;
 	time.tv_sec = 30;
 	time.tv_usec = 0;
 	
+	for(;;){
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock < 0)
-		printf("unable to open socket");
-	for(;;){
+	printf("unable to open socket");
     bzero(&d, sizeof(d));
     d.sin_family = AF_INET;
     d.sin_port = htons(port);
     if ( inet_aton(serv_addr, &d.sin_addr.s_addr) == 0 )
         printf("error\n");
-
-    if ( connect(sock, (struct sockaddr*)&d, sizeof(d)) != 0 )
-        printf("failed to connect\n");
-	
 	bzero(buffer, 256);
 	fgets(buffer,255,stdin);
+    if ( connect(sock, (struct sockaddr*)&d, sizeof(d)) != 0 )
+        printf("failed to connect to server\n");
+	
     n = write(sock, buffer, strlen(buffer));
 	bzero(buffer, 256);
 	n = read(sock, buffer, 255);
 	printf("%s\n", buffer);
     close(sock);
 	if(buffer[0] == "p"){
-	int temp_port = strtol(*buffer[5], &buffer, 10);
-	printf(temp_port);
+		char *temp_str;
+		temp_str = &buffer[5];
+			
+		join_port = atoi(temp_str);
+	printf(join_port);
 	fflush(stdout);
-	d.sin_port = htons(temp_port);
+	d.sin_port = htons(join_port);
     if ( inet_aton(serv_addr, &d.sin_addr.s_addr) == 0 )
 if ( connect(sock, (struct sockaddr*)&d, sizeof(d)) != 0 )
 	printf("failed to connect\n");
 	for(;;){
+	printf("we did it\n");
+	fflush(stdout);
 	bzero(buf, 256);
 	FD_ZERO(&read_fds);
 	FD_SET(sock, &read_fds);
@@ -96,10 +101,10 @@ if ( connect(sock, (struct sockaddr*)&d, sizeof(d)) != 0 )
 	printf("%s\n", buffer);
     close(sock);
 		if(buffer[0] == 9 && isdigit(*buffer)){
-		int temp_port = strtol(buffer, &buffer, 10);
-		printf(temp_port);
+		int join_port = strtol(buffer, &buffer, 10);
+		printf(join_port);
 		fflush(stdout);
-	d.sin_port = htons(temp_port);
+	d.sin_port = htons(join_port);
     if ( inet_aton(serv_addr, &d.sin_addr.s_addr) == 0 )
     {
         printf("error\n");
