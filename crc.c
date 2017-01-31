@@ -17,7 +17,7 @@ struct sockaddr_in d;
 int sock, room_sock;
 int join_port = 0;
 char buffer[256],  buf[256];
-int port = 9650;
+int port = 9145;
 char *serv_addr = "127.0.0.1";
 int m, n, sel, max_fd;
 fd_set read_fds;
@@ -45,21 +45,21 @@ struct timeval time, time1;
 	n = read(sock, buffer, 255);
 	printf("%s\n", buffer);
     close(sock);
-	if(buffer[0] == "p"){
+	if(buffer[0] == 'p'){
 		char *temp_str;
 		temp_str = &buffer[5];
 			
-		join_port = atoi(temp_str);
-	printf(join_port);
-	fflush(stdout);
+	join_port = atoi(temp_str);
+	d.sin_family = AF_INET;
 	d.sin_port = htons(join_port);
     if ( inet_aton(serv_addr, &d.sin_addr.s_addr) == 0 )
+		printf("error\n");
+	sleep(5);
 if ( connect(sock, (struct sockaddr*)&d, sizeof(d)) != 0 )
 	printf("failed to connect\n");
 	for(;;){
-	printf("we did it\n");
-	fflush(stdout);
 	bzero(buf, 256);
+	bzero(buffer, 256);
 	FD_ZERO(&read_fds);
 	FD_SET(sock, &read_fds);
 	FD_SET(STDIN_FILENO, &read_fds);
