@@ -56,13 +56,14 @@ int passiveTCPsock(const char * service, int backlog) {
 		fd_set * set;
 		int master_socket;
 		int process_id;
-		//int x;
+		int deleted;
 	} room;
    //static room* room_db;
    
    void *chat_func(void *db)
    {
 		room* localR = (room*)db;
+		localR->deleted = 0;
 		//printf("x in thread is [%d] with port number [%s]\n",localR->x, localR->port_num);
 		printf("created thread with port number [%s]\n",localR->port_num);
 		int k = 0, m = 0, r = 0;
@@ -71,9 +72,9 @@ int passiveTCPsock(const char * service, int backlog) {
 		fd_set readfds;
 		fd_set copyfds;
 		char msg[256];
-		int fsin_len;
-		struct sockaddr fsin;
-		fsin_len = sizeof(fsin);
+		int fsin_len2;
+		struct sockaddr fsin2;
+		fsin_len2 = sizeof(fsin2);
 		struct timeval *timeout;
 		printf("members: [%d]\n",localR->num_members);
 	   for(;;)
@@ -81,7 +82,7 @@ int passiveTCPsock(const char * service, int backlog) {
 		   members = localR->num_members;
 		   if (members>0)
 		   {
-		   
+		   bzero(msg, strlen(msg));
 		   FD_ZERO(&readfds);
 		   //FD_ZERO(&copyfds);
 		   if(members != prev)
@@ -90,11 +91,12 @@ int passiveTCPsock(const char * service, int backlog) {
 			   printf("someone trying to join, members = [%d]\n",members); //add to select monitor set
 			   
 			   fflush(stdout);
-			   localR->slave_socket[members] = accept(localR->master_socket,(struct sockaddr*)&fsin, &fsin_len);
-			   if (localR->slave_socket[members] < 0) printf("accept to chat fail\n");
+			   localR->slave_socket[members-1] = accept(localR->master_socket,(struct sockaddr*)&fsin2, &fsin_len2);
+			   if (localR->slave_socket[members-1] < 0) printf("accept to chat fail\n");
 			   else printf("join accept success\n");
+				fflush(stdout);
 			   //save to local select
-			   members++;
+			   //members++;
 			   
 		   }
 		 
@@ -104,6 +106,22 @@ int passiveTCPsock(const char * service, int backlog) {
 				   
 			   }
 		   prev = members;
+		   if(localR->deleted == 1){
+			   for (m=0;m<members;m++)
+				{		
+					fgets(msg, 256, "SERVER CLOSING DOWN");
+					write(localR->slave_socket[m], msg, 256);		
+				}
+				sleep(2);
+				for (m=0;m<members;m++)
+				{		
+					close(localR->slave_socket[m]);
+					
+				}
+				close(localR->master_socket);
+				bzero(localR->room_name, strlen(localR->room_name));
+				pthread_exit(NULL);
+			}
 		   if(select(FD_SETSIZE, &readfds, NULL, NULL, NULL) == 0)//timeout?
 			   printf("error with select\n");
 		   else
@@ -112,15 +130,17 @@ int passiveTCPsock(const char * service, int backlog) {
 			   {
 					if (FD_ISSET(localR->slave_socket[k], &readfds))
 					{
+						bzero(msg, strlen(msg));
 						r = read(localR->slave_socket[k], msg, 255);
 						if (r > 0)
-						{printf("client sent msg: [%s] in room [%s]\n", msg,localR->room_name);							
+						{printf("client %d sent msg: %s in room %s\n", k, msg,localR->room_name);
 						for (m=0;m<members;m++)
 						{
 							if (m!=k)
 							{
 								
 								write(localR->slave_socket[m], msg, 256);
+								
 							}
 								
 						}
@@ -147,7 +167,7 @@ int main() {
   //sem = mmap(0, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   //sem_init(sem,1,1);
   
-  char * service = "9145"; /* service name or port number */
+  char * service = "9645"; /* service name or port number */
   int    m_sock, s_sock;   /* master and slave socket     */
   char buffer[256];
   int n;
@@ -266,11 +286,23 @@ int main() {
 	}
 	else if(buffer[0] == 'D' && buffer[1] == 'E' && buffer[2] == 'L' && 
 	buffer[3] == 'E' && buffer[4] == 'T' && buffer[5] == 'E'){
-		printf("delete\n");
-		fflush(stdout);
+		int name_exists = 0;
+		int i;
+		for(i = 0; i< 256; ++i){
+			if(strcmp(room_db[i].room_name, (&buffer[7]))== 0){
+				printf("Deleted Chatroom %s\n", room_db[i].room_name);
+				fflush(stdout);
+				name_exists = 1;
+				room_db[i].deleted =1;
+			}
+		}
+		if(name_exists== 0){
+			printf("Chatroom does not exist\n");
+			fflush(stdout);
+		}
+			
 	}
-	
 	memset(buffer, '\0', 256);
     close(s_sock);
-  }
+}
 }
