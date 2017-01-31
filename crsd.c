@@ -12,6 +12,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <pthread.h>
 
 #define MAX_ROOM 256
 #define MAX_MEMBER 256
@@ -55,18 +56,95 @@ int passiveTCPsock(const char * service, int backlog) {
 		fd_set * set;
 		int master_socket;
 		int process_id;
+		//int x;
 	} room;
-   static room* room_db;
+   //static room* room_db;
+   
+   void *chat_func(void *db)
+   {
+		room* localR = (room*)db;
+		//printf("x in thread is [%d] with port number [%s]\n",localR->x, localR->port_num);
+		printf("created thread with port number [%s]\n",localR->port_num);
+		int k = 0, m = 0, r = 0;
+		int prev = 0;
+		int members = 0;
+		fd_set readfds;
+		fd_set copyfds;
+		char msg[256];
+		int fsin_len;
+		struct sockaddr fsin;
+		fsin_len = sizeof(fsin);
+		struct timeval *timeout;
+		printf("members: [%d]\n",localR->num_members);
+	   for(;;)
+	   {
+		   members = localR->num_members;
+		   if (members>0)
+		   {
+		   
+		   FD_ZERO(&readfds);
+		   //FD_ZERO(&copyfds);
+		   if(members != prev)
+		   {
+			   
+			   printf("someone trying to join, members = [%d]\n",members); //add to select monitor set
+			   
+			   fflush(stdout);
+			   localR->slave_socket[members] = accept(localR->master_socket,(struct sockaddr*)&fsin, &fsin_len);
+			   if (localR->slave_socket[members] < 0) printf("accept to chat fail\n");
+			   //save to local select
+			   members++;
+			   
+		   }
+		 
+			   for(k=0;k<members;k++)
+			   {
+					FD_SET(localR->slave_socket[k], &readfds);
+				   
+			   }
+		   prev = members;
+		   if(select(FD_SETSIZE, &readfds, NULL, NULL, NULL) == 0)//timeout?
+			   printf("error with select\n");
+		   else
+		   {
+			   for(k=0;k<members;k++)
+			   {
+					if (FD_ISSET(localR->slave_socket[k], &readfds))
+					{
+						r = read(localR->slave_socket[k], msg, 255);
+						if (r > 0)							
+						for (m=0;m<members;m++)
+						{
+							if (m!=k)
+							{
+								
+								write(localR->slave_socket[m], msg, 256);
+							}
+								
+						}
+						else if ( r == 0)
+							printf("disconnected client\n");
+						else
+							printf("read error");
+					}
+				   
+			   }
+		   }
+		   
+	   }
+	   }
+   }
 
 int main() {
   room room_db[MAX_ROOM];
-
+  //room_db[0].x = 7;
+  pthread_t chat_thread;
   //sem_t * sem;
   int pid;
   //sem = mmap(0, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   //sem_init(sem,1,1);
   
-  char * service = "9550"; /* service name or port number */
+  char * service = "9145"; /* service name or port number */
   int    m_sock, s_sock;   /* master and slave socket     */
   char buffer[256];
   int n;
@@ -75,9 +153,10 @@ int main() {
   int fsin_len;
   struct sockaddr fsin;
   fsin_len = sizeof(fsin);
+  
   for (;;) {
     s_sock = accept(m_sock,(struct sockaddr*)&fsin, &fsin_len);
-    if (s_sock < 0) printf("accept failed");
+  if (s_sock < 0) printf("accept failed");
 	//if (fork() == 0) {    child 
      // close(m_sock);
       //handle request here . . .
@@ -89,7 +168,8 @@ int main() {
     char * pts = ctime(&now);
     write(s_sock, pts, strlen(pts));*/
     n = read(s_sock, buffer,255);
-	printf("message: %s\n",buffer);
+	if (n > 0)
+	printf("message: [%s]\n",buffer);
 	
 	/*buffer[strlen(buffer) - 2] = '\0';
 	int cmp = strcmp(buffer, "CREATE\n");
@@ -110,6 +190,7 @@ int main() {
 				fflush(stdout);
 				//set true
 				name_exists= 1;
+				i=256;
 			}
 			else if(name_exists == 0 && strlen(room_db[i].room_name) == 0){
 				strncpy(room_db[i].room_name, &buffer[7], sizeof (room_db[i].room_name -1));
@@ -119,13 +200,20 @@ int main() {
 				
 				//itoa(atoi(service)+i+1,room_db[i].port_num,10);
 				sprintf(room_db[i].port_num, "%d", atoi(service)+i+1);
-			printf("port num itoa: [%s] in i [%d]\n",room_db[i].port_num, i);
+				printf("port num itoa: [%s] in i [%d]\n",room_db[i].port_num, i);
 				fflush(stdout);
 				room_db[i].master_socket = passiveTCPsock(room_db[i].port_num, 32);
 				room_db[i].num_members = 0;
-				i=256;
+				
 				char* reply = "K";
 				write(s_sock, reply, strlen(reply));
+				
+				if(pthread_create(&chat_thread, NULL, chat_func, &room_db[i]) != 0) {
+
+					printf("Error creating thread\n");
+
+				}
+				i=256;
 			}
 	}
 	}
@@ -137,7 +225,7 @@ int main() {
 		//bool false
 		int name_exists = 0;
 		
-		for (i = 0; i < 2; ++i)
+		for (i = 0; i < 256; ++i)
 		{
 			printf("comparing [%s] and [%s]\n",room_db[i].room_name,&buffer[5]);
 			if(strcmp(room_db[i].room_name, (&buffer[5]))== 0){
@@ -145,40 +233,32 @@ int main() {
 				printf("join Name exists\n");
 				fflush(stdout);
 				//sem_wait(sem);
-				printf("sem\n");
+				//printf("sem\n");
 				fflush(stdout);
 				name_exists= 1;
-				room_db[i].slave_socket[room_db[i].num_members] = accept(room_db[i].master_socket,(struct sockaddr*)&fsin, &fsin_len);
+				//room_db[i].slave_socket[room_db[i].num_members] = accept(room_db[i].master_socket,(struct sockaddr*)&fsin, &fsin_len);
 				char* portber = room_db[i].port_num;
-				printf("sending [%s] I IS %d\n",portber, i);
-				write(s_sock, portber, strlen(portber));
+				char strport[50] = "port ";
+				strcat(strport, portber);
+				printf("sending [%s] I IS %d\n",strport, i);
+				write(s_sock, strport, strlen(strport));
+				printf("members before inc [%d]\n",room_db[i].num_members);
 				room_db[i].num_members = room_db[i].num_members + 1;
-				room_db[i].process_id = fork();
-				if (room_db[i].process_id == 0) //child
-				{
-					if (room_db[i].num_members > 1)
-					{
-						printf("exiting child\n");
-						//sem_post(sem);
-						_exit(0);
-						printf("after exit?\n");
-					}
-					printf("in child\n");
-					fflush(stdout);
+				printf("members after inc [%d]\n",room_db[i].num_members);
+				fflush(stdout);
+				i=256;
 					//sem_post(sem);
-					n = read(room_db[i].slave_socket[room_db[i].num_members], buffer,255);
-					printf("message chat: %s\n",buffer);
+					//n = read(room_db[i].slave_socket[room_db[i].num_members], buffer,255);
+					//printf("message chat: %s\n",buffer);
 					
-					
-					_exit(0);
-				}
 			}
 			else if(name_exists == 0 && strlen(room_db[i].room_name) == 0){
 				//room not exists
 				printf("join not exist\n");
+				i=256;
 			}
 			else
-				printf("join not exist in i: [%d]\n", i);
+				printf("join not exist? in i: [%d]\n", i);
 		}
 	}
 	else if(buffer[0] == 'D' && buffer[1] == 'E' && buffer[2] == 'L' && 
