@@ -146,7 +146,21 @@ int passiveTCPsock(const char * service, int backlog) {
 						}
 						}
 						else if ( r == 0)
-							printf("disconnected client\n");
+						{
+							printf("disconnected client\n");//use FD_CLEAR?
+							int temp;//close socket?
+							close(localR->slave_socket[k]);
+							for (n=k;n<members-1;n++) //shift array to left
+							{
+								temp = localR->slave_socket[n];
+								localR->slave_socket[n] = localR->slave_socket[n+1];
+								
+								
+							}
+							--(localR->num_members);
+							members--;
+							prev = members;
+						}
 						else
 							printf("read error");
 					}
