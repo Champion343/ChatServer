@@ -66,7 +66,7 @@ int passiveTCPsock(const char * service, int backlog) {
 		localR->deleted = 0;
 		//printf("x in thread is [%d] with port number [%s]\n",localR->x, localR->port_num);
 		printf("created thread with port number [%s]\n",localR->port_num);
-		int k = 0, m = 0, r = 0;
+		int k = 0, m = 0, n = 0, r = 0;
 		int prev = 0;
 		int members = 0;
 		fd_set readfds;
