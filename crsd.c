@@ -66,6 +66,7 @@ void *chat_func(void *db)
 	int prev = 0;
 	int members = 0;
 	fd_set readfds;
+	struct timeval time;
 	char msg[256];
 	int fsin_len2;
 	struct sockaddr fsin2;
@@ -73,6 +74,8 @@ void *chat_func(void *db)
 	printf("members: [%d]\n",localR->num_members);
 	for(;;)
 	{
+	   time.tv_sec = 2;
+	   time.tv_usec = 0;
 	   members = localR->num_members;
 	   if (members>0)
 	   {	
@@ -108,7 +111,7 @@ void *chat_func(void *db)
 				fflush(stdout);
 				pthread_exit(NULL);
 			}
-		   if(select(FD_SETSIZE, &readfds, NULL, NULL, NULL) == 0)//timeout?
+		   if(select(FD_SETSIZE, &readfds, NULL, NULL, &time) == -1)//timeout?
 			   printf("error with select\n");
 		   else
 		   {
@@ -153,7 +156,7 @@ void *chat_func(void *db)
 int main() {
   room room_db[MAX_ROOM];
   pthread_t chat_thread;
-  char * service = "9045"; /* service name or port number */
+  char * service = "9645"; /* service name or port number */
   int    m_sock, s_sock;   /* master and slave socket     */
   char buffer[256];
   int n;
