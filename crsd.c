@@ -77,23 +77,7 @@ void *chat_func(void *db)
 	   time.tv_sec = 2;
 	   time.tv_usec = 0;
 	   members = localR->num_members;
-	   if (members>0)
-	   {	
-		   bzero(msg, strlen(msg));
-		   FD_ZERO(&readfds);
-		   if(members != prev)
-		   {
-			   printf("someone trying to join, members = [%d]\n",members); //add to select monitor set
-			   fflush(stdout);
-			   localR->slave_socket[members-1] = accept(localR->master_socket,(struct sockaddr*)&fsin2, &fsin_len2);
-			   if (localR->slave_socket[members-1] < 0) printf("accept to chat fail\n");
-			   else printf("join accept success\n");
-			   fflush(stdout);
-		   }	 
-		   for(k=0;k<members;k++)
-				FD_SET(localR->slave_socket[k], &readfds);
-		   prev = members;
-		   if(localR->deleted == 1){
+	    if(localR->deleted == 1){
 			   for (m=0;m<members;m++)
 				{		
 					sprintf(msg, "Chatroom shutting down", 256);
@@ -111,6 +95,22 @@ void *chat_func(void *db)
 				fflush(stdout);
 				pthread_exit(NULL);
 			}
+	   if (members>0)
+	   {	
+		   bzero(msg, strlen(msg));
+		   FD_ZERO(&readfds);
+		   if(members != prev)
+		   {
+			   printf("someone trying to join, members = [%d]\n",members); //add to select monitor set
+			   fflush(stdout);
+			   localR->slave_socket[members-1] = accept(localR->master_socket,(struct sockaddr*)&fsin2, &fsin_len2);
+			   if (localR->slave_socket[members-1] < 0) printf("accept to chat fail\n");
+			   else printf("join accept success\n");
+			   fflush(stdout);
+		   }	 
+		   for(k=0;k<members;k++)
+				FD_SET(localR->slave_socket[k], &readfds);
+		   prev = members;
 		   if(select(FD_SETSIZE, &readfds, NULL, NULL, &time) == -1)//timeout?
 			   printf("error with select\n");
 		   else
@@ -152,11 +152,11 @@ void *chat_func(void *db)
 		}
 	}
 }
-
-int main() {
+// ./a.out port
+int main(int argc, char *argv[]) {
   room room_db[MAX_ROOM];
   pthread_t chat_thread;
-  char * service = "9645"; /* service name or port number */
+  char * service = argv[1]; /* service name or port number */
   int    m_sock, s_sock;   /* master and slave socket     */
   char buffer[256];
   int n;
