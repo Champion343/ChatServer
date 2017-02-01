@@ -11,14 +11,15 @@
 #include <sys/time.h>
 #define bufmax 100
 
+// ./a.out host_address port
 int main(int argc, char *argv[]) {
 
 struct sockaddr_in d, d1;
 int sock, room_sock;
 int join_port, exit;
 char buffer[256],  buf[256];
-int port = 9645;
-char *serv_addr = "127.0.0.1";
+int port = atoi(argv[2]);
+char *serv_addr = argv[1];
 int m, n, sel, max_fd;
 fd_set read_fds;
 
