@@ -15,15 +15,15 @@ int main(int argc, char *argv[]) {
 
 struct sockaddr_in d, d1;
 int sock, room_sock;
-int join_port;
+int join_port, exit;
 char buffer[256],  buf[256];
-int port = 9845;
+int port = 9645;
 char *serv_addr = "127.0.0.1";
-char *serv_addr1 = "127.0.0.1";
 int m, n, sel, max_fd;
 fd_set read_fds;
 
 for(;;){
+	exit = 0;
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock < 0)
 		printf("unable to open socket");
@@ -60,14 +60,14 @@ for(;;){
 		d1.sin_family = AF_INET;
 		d1.sin_port = htons(join_port);
 	
-		if ( inet_aton(serv_addr1, &d1.sin_addr.s_addr) == 0 )
+		if ( inet_aton(serv_addr, &d1.sin_addr.s_addr) == 0 )
 			printf("error\n");
-		sleep(5);
+		sleep(3);
 		if ( connect(room_sock, (struct sockaddr*)&d1, sizeof(d1)) != 0 ){
 			printf("failed to connect to server\n");
 		fflush(stdout);
 		}
-		for(;;){
+		while(exit == 0){
 			bzero(buf, 256);
 			bzero(buffer, 256);
 			FD_ZERO(&read_fds);
@@ -94,11 +94,15 @@ for(;;){
 				if(FD_ISSET(room_sock, &read_fds)){
 					recv(room_sock, buf, 256, 0);
 					printf("%s\n", buf);
+				if(strcmp("Chatroom shutting down", buf) == 0){
+					close(room_sock);
+					exit = 1;
+				}
+					
 				}
 			}
 	
 		}
-		close(room_sock);
 	}
 	else
 		close(sock);
