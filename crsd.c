@@ -109,7 +109,7 @@ int passiveTCPsock(const char * service, int backlog) {
 		   if(localR->deleted == 1){
 			   for (m=0;m<members;m++)
 				{		
-					fgets(msg, 256, "SERVER CLOSING DOWN");
+					sprintf(msg, "Chatroom shutting down", 256);
 					write(localR->slave_socket[m], msg, 256);		
 				}
 				sleep(2);
