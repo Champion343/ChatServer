@@ -22,6 +22,7 @@ char *serv_addr = "127.0.0.1";
 int m, n, sel, max_fd;
 fd_set read_fds;
 
+//Client loop
 for(;;){
 	exit = 0;
 	sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -35,22 +36,26 @@ for(;;){
     if ( inet_aton(serv_addr, &d.sin_addr.s_addr) == 0 )
         printf("error\n");
 	
+	printf("CREATE, JOIN or DELETE a room\n");
+	fflush(stdout);
 	bzero(buffer, 256);
 	fgets(buffer,255,stdin);
-	
+	//connect to server
     if ( connect(sock, (struct sockaddr*)&d, sizeof(d)) != 0 )
         printf("failed to connect to server\n");
-	
+	//write to server
     n = write(sock, buffer, strlen(buffer));
 	
 	bzero(buffer, 256);
 	n = read(sock, buffer, 255);
 	printf("%s\n", buffer);
     close(sock);
+	
+	//Join room
 	if(buffer[0] == 'p'){
 		char *temp_str;
 		temp_str = &buffer[5];
-			
+		//convert port	
 		join_port = atoi(temp_str);
 		room_sock = socket(AF_INET, SOCK_STREAM, 0);
 		if(room_sock < 0)
@@ -63,10 +68,12 @@ for(;;){
 		if ( inet_aton(serv_addr, &d1.sin_addr.s_addr) == 0 )
 			printf("error\n");
 		sleep(3);
+		//connect to chatroom
 		if ( connect(room_sock, (struct sockaddr*)&d1, sizeof(d1)) != 0 ){
 			printf("failed to connect to server\n");
 		fflush(stdout);
 		}
+		//chatroom loop
 		while(exit == 0){
 			bzero(buf, 256);
 			bzero(buffer, 256);
@@ -76,16 +83,13 @@ for(;;){
 			//memcpy(&time1, &time, sizeof(time));
 	
 			sel = select(FD_SETSIZE, &read_fds, NULL ,NULL, NULL);
-			if (n == -1) { 
-			// some error occurs
+			if (sel == -1) { 
+			// error
         
-			} /*else if (n == 0) {
-			// timeout, no activity
-			printf("Timeout after 30 seconds.\n");
-			printf("%s\n",buffer);
-		}*/ else {
+			} 
+		     else {
         
-        // if stdin has activity, send the message
+				// if stdin has activity, send the message
 				if(FD_ISSET(STDIN_FILENO, &read_fds)){
 					fgets(buffer, 256, stdin);
 					m = write(room_sock, buffer, strlen(buffer));
@@ -94,8 +98,10 @@ for(;;){
 				if(FD_ISSET(room_sock, &read_fds)){
 					recv(room_sock, buf, 256, 0);
 					printf("%s\n", buf);
+				//check if chatroom closes
 				if(strcmp("Chatroom shutting down", buf) == 0){
 					close(room_sock);
+					//exit to main loop
 					exit = 1;
 				}
 					
